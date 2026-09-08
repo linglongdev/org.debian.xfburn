@@ -1,0 +1,82 @@
+version: "1"
+
+package:
+  id: org.debian.xfburn
+  name: xfburn
+  version: 0.6.2.1
+  kind: app
+  description: |
+    Xfburn is a tool to help burning CDs and DVDs. It fits well in the Xfce
+    Desktop Environment but can be used anywhere.
+
+command:
+  - /opt/apps/org.debian.xfburn/files/bin/xfburn
+
+base: org.deepin.base/25.2.2
+
+sources:
+  - kind: archive
+    url: https://share.cicd.getdeepin.org/ziggy-pool/linyaps-apps-packaging-CI/25M8.top500-init.stage-1.sysRepo/xfburn_0.6.2.orig.tar.gz
+    digest: 8c732a3f13727fb111f4212adf5eb50201af9763367d39defecc160b351c197d
+    name: xfburn_0.6.2.orig.tar.gz
+  - kind: archive
+    url: https://share.cicd.getdeepin.org/ziggy-pool/linyaps-apps-packaging-CI/25M8.top500-init.stage-1.sysRepo/xfburn_0.6.2-1.debian.tar.xz
+    digest: 58a1a2b83f2ea63a95b6a0acdb315bc7909bab0d7239f3fb299f39d1f52d531d
+    name: xfburn_0.6.2-1.debian.tar.xz
+
+buildext:
+  apt:
+    build_depends:
+      - build-essential
+      - pkg-config
+      - gettext
+      - intltool
+      - desktop-file-utils
+      - libglib2.0-dev
+      - libgtk-3-dev
+      - libgstreamer1.0-dev
+      - libgstreamer-plugins-base1.0-dev
+      - libgudev-1.0-dev
+      - libdbus-glib-1-dev
+      - libburn-dev
+      - libisofs-dev
+      - libexo-2-dev
+      - libxfce4ui-2-dev
+      - xfce4-dev-tools
+    depends:
+      - libburn4
+      - libisofs6
+      - libgstreamer1.0-0
+      - gstreamer1.0-plugins-base
+      - libexo-2-0
+      - libxfce4ui-2-0
+      - libgudev-1.0-0
+
+build: |
+  set -e
+
+  SRC=/project/linglong/sources/xfburn_0.6.2.orig.tar.gz/xfburn-0.6.2
+  DEB=/project/linglong/sources/xfburn_0.6.2-1.debian.tar.xz/debian
+
+  if [ ! -d "$SRC" ]; then
+    SRC=$(find /project/linglong/sources/xfburn_0.6.2.orig.tar.gz -maxdepth 1 -type d -name 'xfburn-*' | head -n1)
+  fi
+  cd "$SRC"
+
+  ./configure \
+    --prefix=${PREFIX} \
+    --libdir=${PREFIX}/lib/${TRIPLET} \
+    --disable-maintainer-mode
+
+  make -j$(nproc)
+  make install
+
+  # Desktop integration: rename the desktop file to the linglong app id so
+  # the desktop environment matches the icon/Exec entry correctly.
+  if [ -f ${PREFIX}/share/applications/xfburn.desktop ]; then
+    mv ${PREFIX}/share/applications/xfburn.desktop ${PREFIX}/share/applications/org.debian.xfburn.desktop
+    sed -i 's/^Exec=xfburn/Exec=\/opt\/apps\/org.debian.xfburn\/files\/bin\/xfburn/' ${PREFIX}/share/applications/org.debian.xfburn.desktop
+  fi
+
+  echo "=== installed files ==="
+  find ${PREFIX} -maxdepth 6 \( -type f -o -type l \) | sort
